@@ -1,7 +1,6 @@
 '''
 This file contains the EV class.
 '''
-
 import numpy as np
 import warnings
 import math
@@ -41,7 +40,6 @@ class EV():
         - _discharge: discharges the EV        
 
     '''
-
     def __init__(self,
                  id,
                  location,

@@ -10,7 +10,6 @@ class Transformer():
 
 
     """
-
     def __init__(self,
                  id,  # unique identifier of the transformer
                  env,
@@ -19,7 +18,7 @@ class Transformer():
                  inflexible_load=np.zeros(96),
                  solar_power=np.zeros(96),
                  simulation_length=96
-                 ):
+    ):
         """
         Initialize the transformer
 
@@ -33,7 +32,6 @@ class Transformer():
         :type timescale: int, optional
 
         """
-
         self.id = id
         max_current = max_power * 1000 / 400
         self.max_current = np.ones(simulation_length)*max_current
@@ -73,6 +71,7 @@ class Transformer():
         else:
             self.dr_events = []
 
+    # TODO VKR: Understand demand response mechanic and potentially change or remove
     def generate_demand_response_events(self, env) -> None:
         '''
         This function is used to generate demand response events using the configuration file
@@ -135,6 +134,8 @@ class Transformer():
 
         return events
 
+    # TODO VKR: Find if and where this is used (if at all)
+    # TODO VKR: Used in rl_agent step -> understand and describe step and horizon
     def get_power_limits(self, step, horizon) -> np.array:
         '''
         Get the power limits of the transformer for the next horizon steps.
@@ -185,7 +186,7 @@ class Transformer():
 
     def normalize_pv_generation(self, env) -> None:
         '''
-        Normalize the solar_power using the configuration file and teh max_power of the transformer
+        Normalize the solar_power using the configuration file and the max_power of the transformer
         '''
         if env.config['solar_power']['include']:
             mult = env.config['solar_power']['solar_power_capacity_multiplier_mean']

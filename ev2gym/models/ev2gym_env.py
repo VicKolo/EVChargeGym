@@ -3,7 +3,6 @@ This file contains the EVCity class, which is used to represent the environment 
 The environment is a gym environment and can be also used with the OpenAI gym standards and baselines.
 The environment an also be used for standalone simulations without the gym environment.
 '''
-
 import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
@@ -27,7 +26,6 @@ from ev2gym.rl_agent.state import PublicPST
 
 
 class EV2Gym(gym.Env):
-
     def __init__(self,
                  config_file=None,
                  load_from_replay_path=None,  # path of replay file to load
@@ -44,9 +42,9 @@ class EV2Gym(gym.Env):
                  empty_ports_at_end_of_simulation=True,
                  extra_sim_name=None,
                  verbose=False,
+                 # Does this work??
                  render_mode=None,
-                 ):
-
+    ):
         super(EV2Gym, self).__init__()
 
         if verbose:
@@ -56,17 +54,21 @@ class EV2Gym(gym.Env):
         assert config_file is not None, "Please provide a config file!!!"
         self.config = yaml.load(open(config_file, 'r'), Loader=yaml.FullLoader)
         
+        # rnd_game without terminating condition?
         self.generate_rnd_game = generate_rnd_game
         self.load_from_replay_path = load_from_replay_path
+        # Why is this necessary?
         self.empty_ports_at_end_of_simulation = empty_ports_at_end_of_simulation
         self.save_replay = save_replay
         self.save_plots = save_plots
+        # TODO: check why plots are lightweight
         self.lightweight_plots = lightweight_plots
         self.eval_mode = eval_mode
         self.verbose = verbose  # Whether to print the simulation progress or not
         # Whether to render the simulation in real-time or not
         self.render_mode = render_mode
-
+        
+        # TODO: lenght of simulation?
         self.simulation_length = self.config['simulation_length']
 
         self.replay_path = replay_save_path
@@ -74,8 +76,10 @@ class EV2Gym(gym.Env):
         cs = self.config['number_of_charging_stations']
 
         self.reward_function = reward_function
+        # State func?
         self.state_function = state_function
 
+        # Seeding -> Property
         if seed is None:
             self.seed = np.random.randint(0, 1000000)
             # print(f"Random seed: {self.seed}")
@@ -85,16 +89,16 @@ class EV2Gym(gym.Env):
         np.random.seed(self.seed)
         random.seed(self.seed)
         
+        # Transformer seed not used
         self.tr_seed = self.config['tr_seed']        
         if self.tr_seed == -1:
             self.tr_seed = self.seed            
         self.tr_rng = np.random.default_rng(seed=self.tr_seed)
-                
-
+        
+        # TODO: Loading
         if load_from_replay_path is not None:
             with open(load_from_replay_path, 'rb') as file:
                 self.replay = pickle.load(file)
-
             sim_name = self.replay.replay_path.split(
                 'replay_')[-1].split('.')[0]
             self.sim_name = sim_name + '_replay'
@@ -105,18 +109,15 @@ class EV2Gym(gym.Env):
             self.number_of_ports_per_cs = self.replay.max_n_ports
             self.scenario = self.replay.scenario
             self.heterogeneous_specs = self.replay.heterogeneous_specs
-
         else:
             assert cs is not None, "Please provide the number of charging stations"
             self.cs = cs  # Number of charging stations
             # Threshold for the user satisfaction score
-
             self.number_of_ports_per_cs = self.config['number_of_ports_per_cs']
             self.number_of_transformers = self.config['number_of_transformers']
             self.timescale = self.config['timescale']
             self.simulation_length = int(self.config['simulation_length'])
-            # Simulation time
-
+            # TODO: Simulation time
             self.sim_date = datetime.datetime(self.config['year'],
                                               self.config['month'],
                                               self.config['day'],
@@ -132,6 +133,7 @@ class EV2Gym(gym.Env):
         # Whether to simulate the grid or not (Future feature...)
         self.simulate_grid = False
 
+        # Lightweight plots? 
         if self.cs > 100:
             self.lightweight_plots = True
         self.sim_starting_date = self.sim_date
@@ -146,17 +148,21 @@ class EV2Gym(gym.Env):
                 print(
                     f'Did not find file {self.config["charging_network_topology"]}')
             self.charging_network_topology = None
-
+    	
+        # TODO: Simulation name from replay overwritten here?
         self.sim_name = extra_sim_name + \
             self.sim_name if extra_sim_name is not None else self.sim_name
 
-        # Simulate grid
+        # TODO: Simulate grid
         if self.simulate_grid:
             pass
             # self.grid = Grid(charging_stations=self.cs, case=case)
             # self.cs_buses = self.grid.get_charging_stations_buses()
             # self.cs_transformers = self.grid.get_bus_transformers()
         else:
+            # TODO: What is a bus ->
+            # A bus is a node where a line or several lines are connected
+            # and may also include several components such as loads and generators in a power system
             # self.cs_buses = [None] * self.cs
             if self.charging_network_topology is None:
                 self.cs_transformers = [
@@ -167,6 +173,7 @@ class EV2Gym(gym.Env):
 
         # Instatiate Transformers
         self.transformers = load_transformers(self)
+        # Why not reset at init????
         for tr in self.transformers:
             tr.reset(step=0)
 
@@ -187,15 +194,15 @@ class EV2Gym(gym.Env):
         self.EVs_profiles = load_ev_profiles(self)
         self.EVs = []
 
-        # Load Electricity prices for every charging station
+        # TODO: Load Electricity prices for every charging station
         self.charge_prices, self.discharge_prices = load_electricity_prices(
             self)
 
+        # TODO: Concept of power setpoints / Potential
         # Load power setpoint of simulation
         self.power_setpoints = load_power_setpoints(self)
         self.current_power_usage = np.zeros(self.simulation_length)
         self.charge_power_potential = np.zeros(self.simulation_length)
-
         self.init_statistic_variables()
 
         # Variable showing whether the simulation is done or not
@@ -207,6 +214,7 @@ class EV2Gym(gym.Env):
 
         if self.render_mode:
             # Initialize the rendering of the simulation
+            # TODO Does it work?
             self.renderer = Renderer(self)
 
         if self.save_plots:
@@ -215,6 +223,7 @@ class EV2Gym(gym.Env):
             os.makedirs(f"./results/{self.sim_name}", exist_ok=True)
 
         # Action space: is a vector of size "Sum of all ports of all charging stations"
+        # TODO: Predefine -> Outside of this class
         high = np.ones([self.number_of_ports])
         if self.config['v2g_enabled']:
             lows = -1 * np.ones([self.number_of_ports])
@@ -222,19 +231,18 @@ class EV2Gym(gym.Env):
             lows = np.zeros([self.number_of_ports])
         self.action_space = spaces.Box(low=lows, high=high, dtype=np.float64)
 
+        # TODO: Predefine outside of class
         # Observation space: is a matrix of size ("Sum of all ports of all charging stations",n_features)
         obs_dim = len(self._get_observation())
 
         high = np.inf*np.ones([obs_dim])
         self.observation_space = spaces.Box(
             low=-high, high=high, dtype=np.float64)
-
         # Observation mask: is a vector of size ("Sum of all ports of all charging stations") showing in which ports an EV is connected
         self.observation_mask = np.zeros(self.number_of_ports)
 
     def reset(self, seed=None, options=None, **kwargs):
         '''Resets the environment to its initial state'''
-
         if seed is None:
             self.seed = np.random.randint(0, 1000000)
         else:
@@ -256,23 +264,24 @@ class EV2Gym(gym.Env):
         for tr in self.transformers:
             tr.reset(step=self.current_step)
 
+        # TODO: Adjust config
         if self.load_from_replay_path is not None or not self.config['random_day']:
             self.sim_date = self.sim_starting_date
         else:
             # select random date in range
+            self.sim_date = datetime.datetime(
+                2022,
+                1,
+                1,
+                self.config['hour'],
+                self.config['minute'],
+            ) + datetime.timedelta(days=random.randint(0, int(1.5*365)))
 
-            self.sim_date = datetime.datetime(2022,
-                                              1,
-                                              1,
-                                              self.config['hour'],
-                                              self.config['minute'],
-                                              ) + datetime.timedelta(days=random.randint(0, int(1.5*365)))
-
+            # TODO: Remove scenario -> or change
             if self.scenario == 'workplace':
                 # dont simulate weekends
                 while self.sim_date.weekday() > 4:
                     self.sim_date += datetime.timedelta(days=1)
-
             if self.config['simulation_days'] == "weekdays":
                 # dont simulate weekends
                 while self.sim_date.weekday() > 4:
@@ -282,16 +291,17 @@ class EV2Gym(gym.Env):
                 while self.sim_date.weekday() < 5:
                     self.sim_date += datetime.timedelta(days=1)
 
+        # TODO: Why are this two variables?
         self.sim_starting_date = self.sim_date
+        # TODO: Isn't this done in Environment?
         self.EVs_profiles = load_ev_profiles(self)
         self.power_setpoints = load_power_setpoints(self)
         self.EVs = []
 
         # print(f'Simulation starting date: {self.sim_date}')
-
         # self.sim_name = f'ev_city_{self.simulation_length}_' + \
         # f'{datetime.datetime.now().strftime("%Y-%m-%d_%H-%M")}'
-
+        # TODO: 
         self.init_statistic_variables()
 
         return self._get_observation(), {}
